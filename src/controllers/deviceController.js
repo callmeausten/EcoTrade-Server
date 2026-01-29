@@ -103,7 +103,7 @@ exports.registerDevice = async (req, res) => {
             // Device already registered somewhere
             const ownerWorkspaceName = existingDevice.workspaceId?.name || 'Unknown';
             const isSameWorkspace = existingDevice.workspaceId?._id?.toString() === workspaceId;
-            
+
             if (isSameWorkspace) {
                 return res.status(409).json({
                     success: false,
@@ -406,6 +406,21 @@ exports.updateDevice = async (req, res) => {
             });
         }
 
+        // Check Permissions
+        const isOwner = membership.role === 'OWNER';
+        const isAdmin = membership.role === 'ADMIN';
+        const hasPermission = membership.permissions && membership.permissions.includes('UPDATE_DEVICE');
+
+        if (!isOwner && (!isAdmin || !hasPermission)) {
+            return res.status(403).json({
+                success: false,
+                error: {
+                    code: 'FORBIDDEN',
+                    message: 'Insufficient permissions. Requires UPDATE_DEVICE permission.'
+                }
+            });
+        }
+
         const { name, location } = req.body;
         const oldName = device.name;  // Store old name for activity log
 
@@ -496,6 +511,21 @@ exports.removeDevice = async (req, res) => {
                 error: {
                     code: 'FORBIDDEN',
                     message: 'Access denied'
+                }
+            });
+        }
+
+        // Check Permissions
+        const isOwner = membership.role === 'OWNER';
+        const isAdmin = membership.role === 'ADMIN';
+        const hasPermission = membership.permissions && membership.permissions.includes('REMOVE_DEVICE');
+
+        if (!isOwner && (!isAdmin || !hasPermission)) {
+            return res.status(403).json({
+                success: false,
+                error: {
+                    code: 'FORBIDDEN',
+                    message: 'Insufficient permissions. Requires REMOVE_DEVICE permission.'
                 }
             });
         }
