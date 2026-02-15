@@ -22,7 +22,7 @@ const activitySchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['SCAN', 'DEVICE_ADDED', 'DEVICE_REMOVED', 'DEVICE_TRANSFERRED_OUT', 'DEVICE_TRANSFERRED_IN', 'MEMBER_JOINED', 'MEMBER_LEFT', 'ACHIEVEMENT', 'REWARD', 'GENERIC'],
+        enum: ['SCAN', 'DEVICE_ADDED', 'DEVICE_REMOVED', 'DEVICE_TRANSFERRED_OUT', 'DEVICE_TRANSFERRED_IN', 'MEMBER_JOINED', 'MEMBER_LEFT', 'ACHIEVEMENT', 'REWARD', 'SYSTEM', 'GENERIC'],
         required: true
     },
     title: {

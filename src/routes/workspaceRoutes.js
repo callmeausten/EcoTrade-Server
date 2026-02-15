@@ -62,6 +62,9 @@ router.post('/:id/members/invite', auth, requirePermission('INVITE_MEMBERS'), me
 // FCM token - any member
 router.post('/:id/members/fcm-token', auth, memberController.saveFcmToken);
 
+// Reset points - OWNER or ADMIN
+router.post('/:id/members/reset-points', auth, requireRole(['OWNER', 'ADMIN']), memberController.resetWorkspacePoints);
+
 // ===== INVITATIONS =====
 const invitationController = require('../controllers/invitationController');
 

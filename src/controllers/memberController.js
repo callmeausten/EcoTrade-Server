@@ -47,6 +47,8 @@ exports.getMembers = async (req, res) => {
             email: member.userId.email,
             role: member.role,
             permissions: member.permissions,
+            points: member.points || 0,
+            scanCount: member.scanCount || 0,
             joinedDate: member.joinedDate,
             avatarUrl: member.userId.avatarUrl
         }));
@@ -580,6 +582,107 @@ exports.saveFcmToken = async (req, res) => {
             error: {
                 code: 'INTERNAL_SERVER_ERROR',
                 message: 'Failed to save FCM token'
+            }
+        });
+    }
+};
+// Reset workspace points
+exports.resetWorkspacePoints = async (req, res) => {
+    try {
+        const workspaceId = req.params.id;
+
+        // Check if user is owner/admin
+        const userMembership = await WorkspaceMember.findOne({
+            workspaceId,
+            userId: req.userId
+        });
+
+        if (!userMembership || (userMembership.role !== 'OWNER' && userMembership.role !== 'ADMIN')) {
+            return res.status(403).json({
+                success: false,
+                error: {
+                    code: 'FORBIDDEN',
+                    message: 'Only owners and admins can reset points'
+                }
+            });
+        }
+
+        const workspace = await Workspace.findById(workspaceId);
+        if (!workspace) {
+            return res.status(404).json({
+                success: false,
+                error: {
+                    code: 'NOT_FOUND',
+                    message: 'Workspace not found'
+                }
+            });
+        }
+
+        console.log(`[Reset Points] Resetting points for workspace: ${workspaceId}`);
+
+        // Reset all members points and scan counts
+        const result = await WorkspaceMember.updateMany(
+            { workspaceId },
+            {
+                $set: {
+                    points: 0,
+                    scanCount: 0
+                }
+            }
+        );
+
+        console.log(`[Reset Points] Reset completed. Modified ${result.modifiedCount} members.`);
+
+        // Create Activity log
+        const Activity = require('../models/Activity');
+        const activity = new Activity({
+            workspaceId,
+            userId: req.userId,
+            type: 'SYSTEM',  // Changed from WORKSPACE_UPDATE to valid enum
+            title: 'Points Reset',
+            description: `${userMembership.role === 'OWNER' ? 'Owner' : 'Admin'} reset all member points`,
+            points: 0,
+            timestamp: new Date()
+        });
+        await activity.save();
+
+        // Notification
+        const notification = new Notification({
+            workspaceId,
+            type: 'SYSTEM',  // Changed from WORKSPACE_UPDATE
+            title: 'Points Reset',
+            message: 'All points and rankings have been reset for the new period.',
+            metadata: {
+                action: 'RESET_POINTS',
+                by: req.userId
+            }
+        });
+        await notification.save();
+
+        // Send FCM to workspace
+        sendToWorkspace(workspaceId, {
+            id: notification._id.toString(),
+            workspaceId: workspaceId,
+            type: 'SYSTEM',
+            title: 'Points Reset',
+            message: 'All points and rankings have been reset.'
+        }).catch(err => console.error('FCM send failed:', err));
+
+        res.json({
+            success: true,
+            message: 'Workspace points reset successfully',
+            data: {
+                modifiedCount: result.modifiedCount
+            }
+        });
+
+    } catch (error) {
+        console.error('Reset points error:', error);
+        res.status(500).json({
+            success: false,
+            error: {
+                code: 'INTERNAL_SERVER_ERROR',
+                message: 'Failed to reset points'
             }
         });
     }
