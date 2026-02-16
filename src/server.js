@@ -27,7 +27,14 @@ connectDB();
 initializeScheduledJobs();
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+            "script-src": ["'self'", "https://cdnjs.cloudflare.com"],
+        },
+    },
+}));
 app.use(cors({
     origin: process.env.CORS_ORIGIN || '*',
     credentials: true
@@ -35,6 +42,7 @@ app.use(cors({
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+// app.use(express.static('public'));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -65,6 +73,8 @@ app.use(`/api/${API_VERSION}/notifications`, notificationRoutes);
 app.use(`/api/${API_VERSION}/invitations`, invitationRoutes);
 app.use(`/api/${API_VERSION}/admin`, adminRoutes);
 app.use(`/api/${API_VERSION}/iot`, require('./routes/iotRoutes'));
+app.use(`/api/${API_VERSION}/qr-dummy`, require('./routes/qrDummyRoutes'));
+app.use(`/api/${API_VERSION}/system`, require('./routes/systemRoutes'));
 
 // 404 handler
 app.use((req, res) => {
